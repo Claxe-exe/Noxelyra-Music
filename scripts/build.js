@@ -36,10 +36,12 @@ const config = {
     shortcutName: name, uninstallDisplayName: name, artifactName: `${name.replace(' ', '-')}-Setup.exe`,
     createDesktopShortcut: true, createStartMenuShortcut: true, installerIcon: 'build/icon.ico', uninstallerIcon: 'build/icon.ico',
   },
-  publish: null,
+  // Uygulama içi güncelleme: GitHub Releases, her sürüm kendi kanal dosyası (music.yml / stream.yml). Yükleme release.js'te.
+  publish: [{ provider: 'github', owner: 'Claxe-exe', repo: 'Noxelyra-Music', channel: edition, releaseType: 'release' }],
+  generateUpdatesFilesForAllChannels: false,
 };
 
-builder.build({ targets: builder.Platform.WINDOWS.createTarget(['nsis'], builder.Arch.x64), config })
+builder.build({ targets: builder.Platform.WINDOWS.createTarget(['nsis'], builder.Arch.x64), config, publish: 'never' })
   .then((files) => { console.log(files.join('\n')); })
   .catch((e) => { console.error(e); process.exitCode = 1; })
   .finally(() => fs.writeFileSync(editionFile, JSON.stringify({ edition: 'music' }) + '\n'));

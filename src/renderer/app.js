@@ -527,6 +527,24 @@ async function afterSpotifyLogin() {
 }
 
 // ---------- ayarlar ----------
+// Güncelleme durumunu Ayarlar'daki satıra ve gerektiğinde bildirime yaz.
+function showUpdate(s) {
+  const text = ({
+    checking: 'Denetleniyor…',
+    latest: `En son sürümü kullanıyorsun (${s.version}).`,
+    downloading: `Yeni sürüm ${s.version ?? ''} indiriliyor… %${s.percent ?? 0}`,
+    installing: `Sürüm ${s.version} kuruluyor; uygulama birazdan kapanıp yeniden açılacak.`,
+    error: s.message,
+  })[s.state] ?? '';
+  if (s.state === 'downloading' && !s.version) S.updateText = (S.updateText ?? '').replace(/%\d+$/, `%${s.percent ?? 0}`);
+  else S.updateText = text;
+  const el = $('upd-status');
+  if (el) { el.textContent = S.updateText; el.className = s.state === 'error' ? 'warn' : s.state === 'latest' ? 'ok' : 'muted'; }
+  const btn = $('upd-check');
+  if (btn) btn.disabled = ['checking', 'downloading', 'installing'].includes(s.state);
+  if (['latest', 'installing', 'error'].includes(s.state)) toast(S.updateText, 6000);
+}
+
 function renderSettings() {
   const v = $('view-settings');
   const parts = [`<div class="set"><h1>Ayarlar</h1><p class="muted">${esc(S.info.name)} ${esc(S.info.version)} · Windows medya kontrolleri: ${esc(S.info.smtc)}</p>`];
@@ -567,8 +585,11 @@ function renderSettings() {
       <div class="rowline">${S.spSignedIn ? '<span class="ok">Bağlı</span><button class="btn" id="s-out">Bağlantıyı kes</button> <a data-ext="https://www.spotify.com/account/apps/">Spotify’da izni kaldır</a>' : '<button class="btn primary" id="s-in">Spotify ile giriş yap</button>'}</div>
       <p>İçerik ve kapaklar Spotify’dan gelir; çalan parça “Spotify’da aç” bağlantısıyla Spotify’a bağlanır. Şarkılar indirilmez, kaydedilmez, başka seslerle karıştırılmaz. Spotify içeriği <a data-ext="https://www.spotify.com/legal/end-user-agreement/">Spotify Kullanım Koşulları</a>’na tabidir.</p></div>`);
   }
+  parts.push(`<div class="card"><h2>Güncellemeler</h2>
+    <p>Sürüm <b>${esc(S.info.version)}</b>. Düğmeye basınca GitHub’daki son sürüme bakılır; yeni sürüm varsa indirilir, doğrulanır, kendiliğinden kurulur ve uygulama yeniden açılır. Ayarların ve listelerin korunur.</p>
+    <div class="rowline"><button class="btn primary" id="upd-check">Güncellemeleri denetle</button><span id="upd-status" class="muted">${esc(S.updateText ?? '')}</span></div></div>`);
   parts.push(`<div class="card"><h2>Gizlilik</h2>
-    <p>Telemetri, analiz veya gizli istek yok. Uygulamanın yaptığı ağ istekleri yalnız şunlardır: ${S.info.sources.includes('youtube') ? 'YouTube oynatıcısı ve (girişliysen) YouTube Data API; Google girişi' : ''}${S.info.sources.includes('spotify') ? 'Spotify girişi, Spotify Web API ve Web Playback SDK; Spotify’ın şifreli akışı için Widevine bileşeni (Google’ın güncelleme sunucusundan, castLabs Electron üzerinden)' : ''}. Yerel dosyalar bilgisayarından çıkmaz.</p>
+    <p>Telemetri, analiz veya gizli istek yok. Uygulamanın yaptığı ağ istekleri yalnız şunlardır: ${S.info.sources.includes('youtube') ? 'YouTube oynatıcısı ve (girişliysen) YouTube Data API; Google girişi' : ''}${S.info.sources.includes('spotify') ? 'Spotify girişi, Spotify Web API ve Web Playback SDK; Spotify’ın şifreli akışı için Widevine bileşeni (Google’ın güncelleme sunucusundan, castLabs Electron üzerinden)' : ''}; yalnız “Güncellemeleri denetle”ye basınca GitHub. Yerel dosyalar bilgisayarından çıkmaz.</p>
     <p>Giriş belirteçleri Windows’un şifreleme hizmetiyle (DPAPI) bu bilgisayarda saklanır. Hesap verilerin (listeler, arama sonuçları) diske yazılmaz.</p></div>
     <div class="card"><h2>Noxelyra uyumu</h2>
     <p>Uygulama kimliği (AppUserModelID): <code>${esc(S.info.name)}</code> — exe adıyla aynı. Ses bu uygulamanın kendi işleminden, Windows’un paylaşımlı ses oturumuyla çalınır. Pencere başlığı çalan parçanın adını içerir; video başka pencerelerin altında da çizilmeye devam eder.</p></div></div>`);
@@ -584,6 +605,7 @@ function renderSettings() {
     await nox.settings.set(patch); S.settings = await nox.settings.get(); toast('Kaydedildi.'); renderSettings();
   });
   $('g-in')?.addEventListener('click', ytLogin);
+  $('upd-check')?.addEventListener('click', () => { $('upd-check').disabled = true; nox.update.check().catch((e) => showUpdate({ state: 'error', message: e.message })); });
   $('mini-toggle')?.addEventListener('change', async (e) => {
     await nox.settings.set({ miniOnMinimize: e.target.checked });
     S.settings = await nox.settings.get();
@@ -685,6 +707,7 @@ function bind() {
   bar.addEventListener('pointerup', release);
   bar.addEventListener('pointercancel', () => { drag = null; nox.win.miniDrag('end'); });
   nox.smtc.onCommand(onCommand);
+  nox.update.onStatus(showUpdate);
   nox.lib.onProgress(({ done, total }) => { if (S.listKey.startsWith('local')) $('list-sub').textContent = `Taranıyor… ${done}/${total}`; });
 
   document.addEventListener('keydown', (e) => {

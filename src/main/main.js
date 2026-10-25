@@ -30,6 +30,7 @@ const library = require('./library');
 const auth = require('./auth');
 const { youtube, spotify } = require('./services');
 const server = require('./server');
+const updater = require('./updater');
 
 let win = null;
 let tray = null;
@@ -311,6 +312,7 @@ function registerIpc() {
   });
 
   handle('open:external', (url) => openExternal(String(url)));
+  handle('update:check', () => { updater.checkAndInstall((s) => win?.webContents.send('update:status', s)); return true; });
   handle('win:offscreen', () => { if (!youtubeActive) moveOffscreen(); return !!offscreen; });
   handle('win:restore', () => { restoreFromOffscreen(); return true; });
   handle('mini:exit', () => { exitMini(); return true; });

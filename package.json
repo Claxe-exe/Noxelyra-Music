@@ -1,7 +1,7 @@
 {
   "name": "noxelyra-music",
   "productName": "Noxelyra Music",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Noxelyra'nın dinamik adasıyla uyumlu, hafif müzik ve video oynatıcı",
   "main": "src/main/main.js",
   "private": true,
@@ -17,13 +17,14 @@
     "release": "node scripts/release.js"
   },
   "dependencies": {
+    "electron-updater": "6.8.11",
     "music-metadata": "12.3.2",
     "node-api-dotnet": "0.9.31"
   },
   "devDependencies": {
     "electron": "43.8.3",
-    "electron-wvcus": "github:castlabs/electron-releases#v43.8.3+wvcus",
-    "electron-builder": "26.18.0"
+    "electron-builder": "26.18.0",
+    "electron-wvcus": "github:castlabs/electron-releases#v43.8.3+wvcus"
   },
   "repository": {
     "type": "git",

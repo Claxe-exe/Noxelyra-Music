@@ -19,5 +19,8 @@ run(`npm version ${level} -m "Sürüm %s"`);
 const version = require(path.join(root, 'package.json')).version;
 run('npm run dist');
 run('git push --follow-tags');
-run(`gh release create v${version} "dist/music/Noxelyra-Music-Setup.exe" "dist/stream/Noxelyra-Stream-Setup.exe" --title "Noxelyra Music ${version}" --generate-notes`);
+// Kurulum dosyaları + uygulama içi güncelleyicinin okuduğu kanal dosyaları ve blok haritaları.
+const assets = ['dist/music/Noxelyra-Music-Setup.exe', 'dist/music/Noxelyra-Music-Setup.exe.blockmap', 'dist/music/music.yml',
+  'dist/stream/Noxelyra-Stream-Setup.exe', 'dist/stream/Noxelyra-Stream-Setup.exe.blockmap', 'dist/stream/stream.yml'].map((a) => `"${a}"`).join(' ');
+run(`gh release create v${version} ${assets} --title "Noxelyra Music ${version}" --generate-notes`);
 console.log(`v${version} yayınlandı.`);

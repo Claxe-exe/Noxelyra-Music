@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('nox', {
     shuffle: (device, on) => call('sp:shuffle', device, on), repeat: (device, mode) => call('sp:repeat', device, mode),
   },
   image: (url) => call('img:fetch', url),
+  update: { check: () => call('update:check'), onStatus: on('update:status') },
   openExternal: (url) => call('open:external', url),
   win: {
     offscreen: () => call('win:offscreen'), restore: () => call('win:restore'), onOffscreen: on('window:offscreen'),
