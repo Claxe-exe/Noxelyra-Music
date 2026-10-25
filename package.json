@@ -1,0 +1,32 @@
+{
+  "name": "noxelyra-music",
+  "productName": "Noxelyra Music",
+  "version": "1.0.0",
+  "description": "Noxelyra'nın dinamik adasıyla uyumlu, hafif müzik ve video oynatıcı",
+  "main": "src/main/main.js",
+  "private": true,
+  "license": "MIT",
+  "author": "Claxe",
+  "scripts": {
+    "smtc": "dotnet publish smtc/NoxSmtc.csproj -c Release -o build/smtc --nologo",
+    "start": "npm run smtc && electron .",
+    "start:stream": "npm run smtc && node scripts/run-stream.js",
+    "dist:music": "npm run smtc && node scripts/build.js music",
+    "dist:stream": "npm run smtc && node scripts/build.js stream",
+    "dist": "npm run smtc && node scripts/build.js music && node scripts/build.js stream",
+    "release": "node scripts/release.js"
+  },
+  "dependencies": {
+    "music-metadata": "12.3.2",
+    "node-api-dotnet": "0.9.31"
+  },
+  "devDependencies": {
+    "electron": "43.8.3",
+    "electron-wvcus": "github:castlabs/electron-releases#v43.8.3+wvcus",
+    "electron-builder": "26.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Claxe-exe/Noxelyra-Music.git"
+  }
+}

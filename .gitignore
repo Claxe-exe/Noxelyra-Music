@@ -1,0 +1,6 @@
+node_modules/
+dist/
+build/smtc/
+smtc/bin/
+smtc/obj/
+config/google.json
