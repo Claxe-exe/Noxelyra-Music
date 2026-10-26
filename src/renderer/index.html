@@ -66,6 +66,26 @@
 
     <section id="view-settings" class="view hidden"></section>
 
+    <!-- "YouTube'da ara": YouTube'un kendi sitesi; tıklanan video uygulamanın oynatıcısında çalar. -->
+    <section id="view-browse" class="view browse hidden">
+      <div class="browse-bar">
+        <button class="icon small" id="yb-back" title="Geri">‹</button>
+        <button class="icon small" id="yb-home" title="YouTube ana sayfa">⌂</button>
+        <span class="muted">Bir videoya tıkla, Noxelyra Music’te çalsın. Bu panelde hesabınla giriş yapma.</span>
+      </div>
+      <div id="yb-host" class="browse-host"></div>
+      <div id="yb-consent" class="consent hidden">
+        <div class="consent-card">
+          <h2>YouTube’da ara</h2>
+          <p>Bu panelde <b>YouTube’un kendi sitesi</b> açılır. Orada arayıp gezinebilirsin; bir videoya tıkladığında video bu uygulamanın oynatıcısında çalar.</p>
+          <p class="warn"><b>Bu panelde Google / YouTube hesabınla (e-posta ve parolanla) giriş yapma.</b> Noxelyra Music Google’ın resmi uygulaması değildir. Güvenliğin için panelde giriş sayfaları engellenir; arama ve izlemek için giriş gerekmez.</p>
+          <p>Panel uygulamanın geri kalanından ayrı bir oturumda çalışır, sesi kapalıdır. YouTube’un çerez ve gizlilik seçimleri YouTube’a aittir (<a data-ext="https://www.youtube.com/t/terms">YouTube Hizmet Şartları</a>, <a data-ext="https://policies.google.com/privacy">Google Gizlilik Politikası</a>). Uygulama bu sayfadan veri okumaz, video indirmez.</p>
+          <label class="switch"><input type="checkbox" id="yb-agree"><span>Okudum; bu panelde hesabımla giriş yapmayacağım.</span></label>
+          <div class="rowline"><button class="btn primary" id="yb-ok" disabled>Devam et</button><button class="btn" id="yb-cancel">Vazgeç</button></div>
+        </div>
+      </div>
+    </section>
+
     <div id="stage" class="stage idle">
       <video id="video" playsinline preload="auto"></video>
       <div id="yt-host"><div id="yt-player"></div></div>

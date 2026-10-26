@@ -34,6 +34,7 @@ Kurulum kullanıcı kapsamındadır, yönetici izni istemez. Masaüstü ve Başl
 ## Kullanım
 
 - **Kitaplık:** Varsayılan olarak Müzik klasörü taranır. Ayarlar'dan klasör ekleyebilirsin. Dosya veya klasörü pencereye sürükleyince hemen çalar. Desteklenen biçimler: MP3, FLAC, M4A, AAC, OGG, Opus, WAV ve video olarak MP4, WebM, MOV (MKV'de codec'e bağlı).
+- **YouTube'da ara:** YouTube sekmesinde YouTube'un kendi sitesi açılır. Arayıp bir videoya, Shorts'a ya da oynatma listesine tıklayınca o sayfada değil, Noxelyra Music'in oynatıcısında çalar. Panelde arayabilmen için köşedeki küçük oynatıcıda çalar. Panel uygulamanın geri kalanından ayrı bir oturumda çalışır ve sesi kapalıdır. İlk açılışta, panelde Google hesabıyla giriş yapmaman gerektiğini anlatan bir onay metni çıkar; panelde giriş sayfaları da engellenir. Uygulama sayfadan veri okumaz, video indirmez. Not: Bu yöntem YouTube'un resmi API'si değil, sitenin kendisidir. YouTube kuralları bunu açıkça yasaklamıyor ama açıkça izin de vermiyor; bir gri alan.
 - **YouTube:** Video veya oynatma listesi bağlantısını yapıştır, hemen çalar; giriş gerekmez. Arama, oynatma listelerin ve beğendiklerin için Google ile giriş yapabilirsin. Bunun için kendi ücretsiz Google Cloud OAuth istemcin gerekir; adımlar Ayarlar'da.
 - **Spotify (Noxelyra Stream):** Spotify Premium ve kendi Spotify geliştirici uygulaman gerekir. Redirect URI: `http://127.0.0.1:47863/oauth/spotify`. Adımlar Ayarlar'da.
 - **Kısayollar:** Boşluk oynat/duraklat, ←/→ ±10 sn, Ctrl+F ara, Esc sahneden çık.

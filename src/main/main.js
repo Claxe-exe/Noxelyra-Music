@@ -61,6 +61,7 @@ async function createWindow() {
       spellcheck: false, // yazım denetimi sözlük indirmesin
       backgroundThrottling: false,
       autoplayPolicy: 'no-user-gesture-required',
+      webviewTag: edition.sources.includes('youtube'), // yalnız "YouTube'da ara" paneli için (bkz. YT_PARTITION)
     },
   });
 
@@ -95,6 +96,13 @@ async function createWindow() {
   const wc = win.webContents;
   wc.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
   wc.on('will-navigate', (e, url) => { if (!url.startsWith(web.origin)) { e.preventDefault(); openExternal(url); } });
+  // Webview yalnız YouTube paneli olabilir: ayrı oturum, Node yok, bizim ön yükleme betiğimiz, yalnız youtube.com.
+  wc.on('will-attach-webview', (e, prefs, params) => {
+    if (!edition.sources.includes('youtube') || !/^https:\/\/www\.youtube\.com\//.test(params.src) || params.partition !== YT_PARTITION) { e.preventDefault(); return; }
+    delete prefs.preloadURL;
+    prefs.preload = path.join(__dirname, '..', 'ytbrowse-preload.js');
+    Object.assign(prefs, { nodeIntegration: false, contextIsolation: true, sandbox: true, spellcheck: false, backgroundThrottling: true });
+  });
 
   await win.loadURL(`${web.origin}/`);
 
@@ -238,7 +246,7 @@ function registerIpc() {
     smtc: smtc.available() ? 'yerel köprü' : `Chromium (${smtc.error() ?? 'köprü yok'})`, version: app.getVersion() }));
   handle('settings:get', () => { const { googleClientSecret: _s, bounds: _b, ...rest } = store.load(); return { ...rest, hasGoogleSecret: !!store.load().googleClientSecret, googleBuiltIn: auth.googleBuiltIn() }; });
   handle('settings:set', (patch) => {
-    const allowed = ['volume', 'shuffle', 'repeat', 'spotifyClientId', 'googleClientId', 'googleClientSecret', 'view', 'miniOnMinimize'];
+    const allowed = ['volume', 'shuffle', 'repeat', 'spotifyClientId', 'googleClientId', 'googleClientSecret', 'view', 'miniOnMinimize', 'ytBrowseConsent'];
     store.save(Object.fromEntries(Object.entries(patch ?? {}).filter(([k]) => allowed.includes(k))));
     return true;
   });
@@ -354,6 +362,34 @@ function ensureStartMenuShortcut() {
 
 app.on('second-instance', () => { if (mini) exitMini(); if (offscreen) restoreFromOffscreen(); if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
 app.on('window-all-closed', () => app.quit());
+
+// ---------- "YouTube'da ara" paneli ----------
+// YouTube'un kendi sitesi ayrı bir oturumda (çerezleri uygulamanın geri kalanından ayrı) açılır. Panelin sesi
+// kapalıdır (ana sayfadaki önizlemeler ses çıkarmaz). Tıklanan video ön yükleme betiğiyle uygulamanın oynatıcısına
+// gönderilir; betik bir tıklamayı kaçırırsa izleme sayfası açılınca geri dönülür. Google hesabı girişi engellenir.
+const YT_PARTITION = 'persist:ytbrowse';
+const isWatch = (u) => { try { const x = new URL(u); return /(^|\.)youtube\.com$/.test(x.hostname) && (x.pathname === '/watch' || x.pathname.startsWith('/shorts/')); } catch { return false; } };
+const isSignIn = (u) => { try { const x = new URL(u); return /(^|\.)accounts\.google\.com$|(^|\.)accounts\.youtube\.com$/.test(x.hostname) || x.pathname.startsWith('/signin') || x.pathname.startsWith('/ServiceLogin'); } catch { return false; } };
+
+app.on('web-contents-created', (_e, contents) => {
+  if (contents.getType() !== 'webview') return;
+  contents.setAudioMuted(true);
+  const host = () => contents.hostWebContents;
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isWatch(url)) host()?.send('ytbrowse:play', url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (e, url) => {
+    if (isSignIn(url)) { e.preventDefault(); host()?.send('ytbrowse:signin'); return; }
+    if (isWatch(url)) { e.preventDefault(); host()?.send('ytbrowse:play', url); return; }
+    if (!/^https:\/\/([a-z0-9-]+\.)*(youtube\.com|google\.com|gstatic\.com)\//i.test(url)) { e.preventDefault(); openExternal(url); }
+  });
+  contents.on('did-navigate-in-page', (_e2, url) => {
+    if (!isWatch(url)) return;
+    host()?.send('ytbrowse:play', url);
+    if (contents.navigationHistory.canGoBack()) contents.navigationHistory.goBack(); else contents.loadURL('https://www.youtube.com/');
+  });
+});
 
 app.whenReady().then(async () => {
   // Spotify sürümü: castLabs Electron'un Widevine CDM bileşeni hazır olsun (Spotify şifreli akış kullanır).

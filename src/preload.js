@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('nox', {
   },
   image: (url) => call('img:fetch', url),
   update: { check: () => call('update:check'), onStatus: on('update:status') },
+  ytbrowse: { onPlay: on('ytbrowse:play'), onSignIn: on('ytbrowse:signin') },
   openExternal: (url) => call('open:external', url),
   win: {
     offscreen: () => call('win:offscreen'), restore: () => call('win:restore'), onOffscreen: on('window:offscreen'),

@@ -72,7 +72,8 @@ async function playIndex(i) {
   if (S.engine && S.engine !== engine) S.engine.stop();
   S.engine = engine;
   S.current = t;
-  if (t.video && (t.source === 'youtube' || t.source === 'local') && !S.stageWasClosed) S.stageFull = true;
+  // Panelde gezinirken sahne köşede küçük kalsın; kullanıcı aramaya devam edebilsin.
+  if (t.video && (t.source === 'youtube' || t.source === 'local') && !S.stageWasClosed && !S.browsing) S.stageFull = true;
   updateStage();
   onTrackChanged();
   try {
@@ -316,8 +317,48 @@ function renderRows() {
 function showView(v) {
   $('view-list').classList.toggle('hidden', v !== 'list');
   $('view-settings').classList.toggle('hidden', v !== 'settings');
+  $('view-browse').classList.toggle('hidden', v !== 'browse');
+  S.browsing = v === 'browse';
   document.querySelectorAll('.side-item').forEach((b) => b.classList.toggle('on', v === 'settings' ? b.dataset.view === 'settings' : b.dataset.key === S.listKey));
   if (v === 'settings') { if (S.stageFull) setStageFull(false); renderSettings(); }
+  if (v === 'browse') { if (S.stageFull) setStageFull(false); openBrowse(); }
+}
+
+// ---------- "YouTube'da ara" paneli ----------
+// İlk açılışta rıza metni; onaydan sonra YouTube'un sitesi ayrı oturumda (persist:ytbrowse) yüklenir.
+function openBrowse() {
+  const consent = $('yb-consent');
+  if (!S.settings.ytBrowseConsent) { consent.classList.remove('hidden'); return; }
+  consent.classList.add('hidden');
+  if ($('yb-host').querySelector('webview')) return;
+  const wv = document.createElement('webview');
+  wv.setAttribute('partition', 'persist:ytbrowse');
+  wv.setAttribute('src', 'https://www.youtube.com/');
+  wv.addEventListener('ipc-message', (e) => { if (e.channel === 'nox-play') playFromBrowse(e.args[0]); });
+  $('yb-host').appendChild(wv);
+}
+
+let lastBrowse = { url: '', at: 0 };
+function playFromBrowse(url) {
+  // Ön yükleme betiği ve ana işlemdeki yedek yol aynı tıklamayı iki kez bildirebilir.
+  if (url === lastBrowse.url && Date.now() - lastBrowse.at < 2000) return;
+  lastBrowse = { url, at: Date.now() };
+  youtubeFromLink(url, false);
+}
+
+function bindBrowse() {
+  $('yb-agree').addEventListener('change', (e) => { $('yb-ok').disabled = !e.target.checked; });
+  $('yb-ok').addEventListener('click', async () => {
+    await nox.settings.set({ ytBrowseConsent: true });
+    S.settings = await nox.settings.get();
+    openBrowse();
+  });
+  $('yb-cancel').addEventListener('click', () => openList('yt:link'));
+  $('yb-consent').querySelectorAll('[data-ext]').forEach((a) => a.addEventListener('click', () => nox.openExternal(a.dataset.ext)));
+  $('yb-back').addEventListener('click', () => { const wv = $('yb-host').querySelector('webview'); if (wv?.canGoBack()) wv.goBack(); });
+  $('yb-home').addEventListener('click', () => $('yb-host').querySelector('webview')?.loadURL('https://www.youtube.com/'));
+  nox.ytbrowse.onPlay(playFromBrowse);
+  nox.ytbrowse.onSignIn(() => toast('Bu panelde hesapla giriş yapılamaz. Arama ve izlemek için giriş gerekmez.', 6000));
 }
 
 // ---------- kenar çubuğu ve kaynaklar ----------
@@ -329,7 +370,7 @@ function renderNav() {
     const music = S.library.filter((t) => !t.video).length, video = S.library.length - music;
     items.push(['local:all', 'list', 'Tüm parçalar', S.library.length], ['local:music', 'note', 'Müzik', music], ['local:video', 'film', 'Videolar', video]);
   } else if (S.source === 'youtube') {
-    items.push(['yt:link', 'link', 'Bağlantı aç']);
+    items.push(['yt:browse', 'search', 'YouTube’da ara'], ['yt:link', 'link', 'Bağlantı aç']);
     for (const p of S.ytSaved) items.push([`yt:saved:${p.id}`, 'list', p.title]);
     for (const p of S.ytPlaylists) items.push([`yt:pl:${p.id}`, p.title.startsWith('Beğendiğim') ? 'heart' : 'list', p.title, p.count]);
   } else {
@@ -353,6 +394,7 @@ async function openList(key) {
     emptyText(S.settings.folders.length ? 'Bu klasörlerde çalınabilir dosya bulunamadı.<br><button class="btn" data-act="folder">Klasör ekle</button>' : 'Henüz klasör yok.<br><button class="btn primary" data-act="folder">Müzik klasörü ekle</button>');
     return;
   }
+  if (key === 'yt:browse') { S.listKey = key; renderNav(); showView('browse'); return; }
   if (key === 'yt:link') { openYouTubeLink(); return; }
   if (key.startsWith('yt:saved:')) {
     // Kayıtlı liste: tıklayınca çalar. Video kimlikleri saklanmaz, her seferinde YouTube'dan okunur.
@@ -401,7 +443,11 @@ function parseYouTube(text) {
     let v = u.searchParams.get('v');
     if (!v && u.hostname.endsWith('youtu.be')) v = u.pathname.slice(1);
     if (!v) { const m = /^\/(shorts|embed|live)\/([\w-]{11})/.exec(u.pathname); if (m) v = m[2]; }
-    return { v: v && /^[\w-]{11}$/.test(v) ? v : null, list: list && /^[\w-]+$/.test(list) ? list : null };
+    v = v && /^[\w-]{11}$/.test(v) ? v : null;
+    // "RD…" YouTube'un otomatik Mix listesidir: gömülü oynatıcıda başka videoyla başlar ve kaydedilmeye değmez.
+    // Videoyla birlikte gelirse yalnız video çalınır.
+    const keepList = list && /^[\w-]+$/.test(list) && !(v && list.startsWith('RD'));
+    return { v, list: keepList ? list : null };
   } catch { return /^[\w-]{11}$/.test(text.trim()) ? { v: text.trim(), list: null } : null; }
 }
 
@@ -423,8 +469,8 @@ async function youtubeFromLink(text, append) {
     // Listeyi doğrudan görünür oynatıcıda başlat; YouTube gizli oynatıcıya liste yüklemiyor.
     toast('Liste açılıyor…', 15000);
     if (S.engine && S.engine !== youtube) S.engine.stop();
-    S.stageFull = true; S.stageWasClosed = false;
-    $('stage').className = 'stage full youtube';
+    S.stageFull = !S.browsing; S.stageWasClosed = false;
+    $('stage').className = `stage ${S.stageFull ? 'full' : 'mini'} youtube`;
     const ids = await youtube.loadList(p.list, p.v).catch(() => []);
     if (ids.length) {
       tracks = make(ids);
@@ -622,7 +668,7 @@ function bind() {
   $('nav').addEventListener('click', (e) => {
     const b = e.target.closest('[data-src]'); if (!b) return;
     S.source = b.dataset.src; $('search').value = ''; renderNav();
-    openList(S.source === 'local' ? 'local:all' : S.source === 'youtube' ? 'yt:link' : (S.spPlaylists[0] ? `sp:pl:${S.spPlaylists[0].id}` : 'queue'));
+    openList(S.source === 'local' ? 'local:all' : S.source === 'youtube' ? 'yt:browse' : (S.spPlaylists[0] ? `sp:pl:${S.spPlaylists[0].id}` : 'queue'));
   });
   $('side-list').addEventListener('click', async (e) => {
     const rm = e.target.closest('[data-unsave]');
@@ -757,7 +803,7 @@ async function start() {
   local = new LocalEngine($('video'), emit);
   youtube = new YouTubeEngine('yt-player', emit);
   spotify = new SpotifyEngine(S.info.name, emit);
-  bind(); bindMediaSession(); applyVolume(); renderModes(); renderNow();
+  bind(); if (S.info.sources.includes('youtube')) bindBrowse(); bindMediaSession(); applyVolume(); renderModes(); renderNow();
 
   if (S.info.sources.includes('local')) {
     const r = await nox.lib.list(); S.library = r.tracks; S.settings.folders = r.folders;
