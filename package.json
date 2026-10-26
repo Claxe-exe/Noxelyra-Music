@@ -1,7 +1,7 @@
 {
   "name": "noxelyra-music",
   "productName": "Noxelyra Music",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Noxelyra'nın dinamik adasıyla uyumlu, hafif müzik ve video oynatıcı",
   "main": "src/main/main.js",
   "private": true,
