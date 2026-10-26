@@ -26,6 +26,12 @@ app.commandLine.appendSwitch('disable-renderer-backgrounding');
 if (!app.requestSingleInstanceLock()) app.exit(0);
 
 const store = require('./store');
+
+// Performans modu: donanım hızlandırması ve akrilik/saydamlık kapalı. Ekran kartı neredeyse hiç kullanılmaz;
+// Alt+Tab önizlemeleri gibi ağır pencere birleştirme anlarında ekran kartı sürücüsü sorunlarını azaltmak için.
+// Ayar yeniden başlatınca geçerli olur (donanım hızlandırması ancak açılışta kapatılabilir).
+const performanceMode = !!store.load().performanceMode;
+if (performanceMode) app.disableHardwareAcceleration();
 const library = require('./library');
 const auth = require('./auth');
 const { youtube, spotify } = require('./services');
@@ -49,8 +55,8 @@ async function createWindow() {
     title: edition.name,
     icon: ICON,
     show: false,
-    backgroundColor: '#00000000',
-    backgroundMaterial: 'acrylic',
+    backgroundColor: performanceMode ? '#120e1c' : '#00000000',
+    backgroundMaterial: performanceMode ? 'none' : 'acrylic',
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#e9e4ff', height: 40 },
     webPreferences: {
@@ -243,10 +249,11 @@ function registerIpc() {
   });
 
   handle('info', () => ({ edition: edition.id, name: edition.name, sources: edition.sources, origin: web.origin, secret: web.secret,
-    smtc: smtc.available() ? 'yerel köprü' : `Chromium (${smtc.error() ?? 'köprü yok'})`, version: app.getVersion() }));
+    smtc: smtc.available() ? 'yerel köprü' : `Chromium (${smtc.error() ?? 'köprü yok'})`, version: app.getVersion(), performanceMode }));
+  handle('app:relaunch', () => { app.relaunch(); app.exit(0); });
   handle('settings:get', () => { const { googleClientSecret: _s, bounds: _b, ...rest } = store.load(); return { ...rest, hasGoogleSecret: !!store.load().googleClientSecret, googleBuiltIn: auth.googleBuiltIn() }; });
   handle('settings:set', (patch) => {
-    const allowed = ['volume', 'shuffle', 'repeat', 'spotifyClientId', 'googleClientId', 'googleClientSecret', 'view', 'miniOnMinimize', 'ytBrowseConsent'];
+    const allowed = ['volume', 'shuffle', 'repeat', 'spotifyClientId', 'googleClientId', 'googleClientSecret', 'view', 'miniOnMinimize', 'ytBrowseConsent', 'performanceMode'];
     store.save(Object.fromEntries(Object.entries(patch ?? {}).filter(([k]) => allowed.includes(k))));
     return true;
   });

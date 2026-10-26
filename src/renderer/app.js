@@ -631,6 +631,11 @@ function renderSettings() {
       <div class="rowline">${S.spSignedIn ? '<span class="ok">Bağlı</span><button class="btn" id="s-out">Bağlantıyı kes</button> <a data-ext="https://www.spotify.com/account/apps/">Spotify’da izni kaldır</a>' : '<button class="btn primary" id="s-in">Spotify ile giriş yap</button>'}</div>
       <p>İçerik ve kapaklar Spotify’dan gelir; çalan parça “Spotify’da aç” bağlantısıyla Spotify’a bağlanır. Şarkılar indirilmez, kaydedilmez, başka seslerle karıştırılmaz. Spotify içeriği <a data-ext="https://www.spotify.com/legal/end-user-agreement/">Spotify Kullanım Koşulları</a>’na tabidir.</p></div>`);
   }
+  const perfSaved = !!S.settings.performanceMode, perfNow = !!S.info.performanceMode;
+  parts.push(`<div class="card"><h2>Performans</h2>
+    <div class="rowline"><label class="switch"><input type="checkbox" id="perf-toggle"${perfSaved ? ' checked' : ''}><span>Performans modu</span></label></div>
+    <p>Donanım hızlandırmasını ve akrilik/saydam arka planı kapatır. Ekran kartı neredeyse hiç kullanılmaz; video işlemciyle çözülür. Alt+Tab sırasında ekran kartı sürücüsü çöküyorsa ya da donuyorsa aç. Pencere düz koyu renk olur.</p>
+    ${perfSaved !== perfNow ? '<div class="rowline"><span class="warn">Değişiklik uygulama yeniden başlayınca geçerli olur.</span><button class="btn primary" id="perf-relaunch">Şimdi yeniden başlat</button></div>' : ''}</div>`);
   parts.push(`<div class="card"><h2>Güncellemeler</h2>
     <p>Sürüm <b>${esc(S.info.version)}</b>. Düğmeye basınca GitHub’daki son sürüme bakılır; yeni sürüm varsa indirilir, doğrulanır, kendiliğinden kurulur ve uygulama yeniden açılır. Ayarların ve listelerin korunur.</p>
     <div class="rowline"><button class="btn primary" id="upd-check">Güncellemeleri denetle</button><span id="upd-status" class="muted">${esc(S.updateText ?? '')}</span></div></div>`);
@@ -651,6 +656,12 @@ function renderSettings() {
     await nox.settings.set(patch); S.settings = await nox.settings.get(); toast('Kaydedildi.'); renderSettings();
   });
   $('g-in')?.addEventListener('click', ytLogin);
+  $('perf-toggle')?.addEventListener('change', async (e) => {
+    await nox.settings.set({ performanceMode: e.target.checked });
+    S.settings = await nox.settings.get();
+    renderSettings();
+  });
+  $('perf-relaunch')?.addEventListener('click', () => nox.relaunch());
   $('upd-check')?.addEventListener('click', () => { $('upd-check').disabled = true; nox.update.check().catch((e) => showUpdate({ state: 'error', message: e.message })); });
   $('mini-toggle')?.addEventListener('change', async (e) => {
     await nox.settings.set({ miniOnMinimize: e.target.checked });
@@ -796,6 +807,7 @@ async function start() {
   // Sıfırda kaydedilmiş ses düzeyiyle sessiz açılma (ses 0'ken Windows ses oturumu da açılmaz).
   if (!(S.volume >= 0.02)) S.volume = 0.5;
   document.body.classList.add(`edition-${S.info.edition}`);
+  if (S.info.performanceMode) document.body.classList.add('perf');
   $('app-name').textContent = S.info.name;
   document.title = S.info.name;
   S.source = S.info.sources[0];

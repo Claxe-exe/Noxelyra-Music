@@ -214,3 +214,7 @@ body.mini .stage-close { display: none !important; }
 .consent-card p { color: var(--muted); line-height: 1.55; margin: 8px 0; user-select: text; }
 .consent-card p.warn { color: #ffcf7a; }
 .consent-card .rowline { display: flex; gap: 8px; margin-top: 14px; }
+
+/* Performans modu: saydamlık yok, düz koyu arka plan (DWM bulanıklık hesaplamaz). */
+body.perf { background: #120e1c; }
+body.perf .content { background: #19142a; }
